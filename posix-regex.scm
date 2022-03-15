@@ -110,7 +110,7 @@
 ;;> procedure always raises an error and should only be called
 ;;> if {{regcomp(3)}} returned {{NULL}}.
 
-(: regex-error (pointer integer -> *))
+(: regex-error (pointer integer -> noreturn))
 (define (regex-error regex err-code)
   (define %regex-error
     (foreign-lambda c-string* "regex_error" c-pointer int))
