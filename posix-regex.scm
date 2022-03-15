@@ -209,12 +209,10 @@
             (vector-set! vec idx (cons start end))
             (%submatches->vector (+ idx 1) vec))))))
 
-  (if (zero? (submatches-count subm))
-    #()
-    (let* ((vec (make-vector (submatches-count subm)))
-           (matched (%submatches->vector 0 vec)))
-      ;; Resize vector to actual amount of matched submatches.
-      (vector-copy vec 0 matched))))
+  (let* ((vec (make-vector (submatches-count subm)))
+         (matched (%submatches->vector 0 vec)))
+    ;; Resize vector to actual amount of matched submatches.
+    (vector-copy vec 0 matched)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
