@@ -1,10 +1,8 @@
 (foreign-declare "
+  #include <assert.h>
   #include <stdlib.h>
   #include <stdbool.h>
   #include <regex.h>
-
-  /* Maximum error message length */
-  #define MAX_ERR_LEN 128
 
   regex_t *
   make_regex(int *err, char *pattern, bool igncase, bool ext, bool nl)
@@ -40,14 +38,19 @@
   char *
   regex_error(regex_t *re, int err)
   {
+    int r;
     char *buf;
+    int bufsiz;
 
-    if (!(buf = malloc(MAX_ERR_LEN)))
+    /* Find out how big a buffer is needed and alloc it. */
+    bufsiz = regerror(err, re, (char *)NULL, (size_t)0);
+    assert(bufsiz > 0);
+    if (!(buf = malloc(bufsiz)))
       return NULL;
 
-    /* XXX: Result may be truncated */
-    /* TODO: Call with zero buf to get required length first? */
-    regerror(err, re, buf, MAX_ERR_LEN);
+    r = regerror(err, re, buf, bufsiz);
+    assert(r <= bufsiz);
+    (void)r;
 
     return buf;
   }
