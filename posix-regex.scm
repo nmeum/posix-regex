@@ -56,9 +56,16 @@
 ;; Convenience type alias for exception type from R7RS.
 (define-type exception (struct condition))
 
+;; Error object irritant used to identify {{make-regex}} error
+;; objects via the {{regex-error?}} error type predicate.
+
 (define-record-type Regex-Irritant
   (make-regex-irritant)
   regex-irritant?)
+
+;; Error type predicate. Returns {{#t}} if the given {{obj}}
+;; is an object raised by the {{make-regex}} procedure to
+;; indicate a regex library error condition.
 
 (: regex-error? (* -> boolean : exception))
 (define (regex-error? obj)
@@ -69,9 +76,17 @@
         (regex-irritant? (car irritants))))
     #f))
 
+;; Convenience method for raising a regex error recognized
+;; by the {{regex-error?}} error type predicate.
+
 (: error-regex (string -> *))
 (define (error-regex msg)
   (error msg (make-regex-irritant)))
+
+;;> Extracts error condition from given {{regex_t*}} pointer value
+;;> and associated error code as returned by {{regcomp(3)}}. This
+;;> procedure always raises an error and should only be called
+;;> if {{regcomp(3)}} returned {{NULL}}.
 
 (: regex-error (pointer integer -> *))
 (define (regex-error regex err-code)
@@ -85,6 +100,9 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; Wrapper around the {{regex_t*}} raw C pointer, created to allow
+;; utilizing CHICKEN type annotations for {{regex_t*}} values.
+
 (define-record-type Regex
   (%%make-regex ptr)
   regex?
@@ -95,6 +113,13 @@
 
 ;; Type annotation for Regex type constructor.
 (: %%make-regex (pointer -> regex))
+
+;;> Returns a pre-compiled regular expression object for the given
+;;> {{pattern}}. The optional arguments {{ignorecase}}, {{extended}}, and
+;;> {{newline}} specify whether the case should be ignored during
+;;> matching, if extended regular expression syntax should be supported,
+;;> and if {{<newline>}} in a pattern should not be treated as an ordinary
+;;> character. All optional arguments default to {{#f}}.
 
 (: make-regex (string #!optional boolean boolean boolean -> regex))
 (define (make-regex pattern #!optional ignorecase extended newline)
@@ -108,6 +133,9 @@
           (set-finalizer! re regex-free)
           (%%make-regex re))
         (regex-error re err)))))
+
+;; Frees all resources allocate for a {{regex_t*}} pointer value. Invoked
+;; automatically via a CHICKEN Garbage Collector finalizer.
 
 (: regex-free (pointer -> undefined))
 (define (regex-free ptr)
