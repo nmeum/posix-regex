@@ -118,53 +118,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Convenience type alias for exception type from R7RS.
-(define-type exception (struct condition))
-
-;; Error object irritant used to identify {{make-regex}} error
-;; objects via the {{regex-error?}} error type predicate.
-
-(define-record-type Regex-Irritant
-  (make-regex-irritant)
-  regex-irritant?)
-
-;; Error type predicate. Returns {{#t}} if the given {{obj}}
-;; is an object raised by the {{make-regex}} procedure to
-;; indicate a regex library error condition.
-
-(: regex-error? (* -> boolean : exception))
-(define (regex-error? obj)
-  (if (error-object? obj)
-    (let ((irritants (error-object-irritants obj)))
-      (and
-        (not (null? irritants))
-        (regex-irritant? (car irritants))))
-    #f))
-
-;; Convenience method for raising a regex error recognized
-;; by the {{regex-error?}} error type predicate.
-
-(: error-regex (string -> *))
-(define (error-regex msg)
-  (error msg (make-regex-irritant)))
-
-;;> Extracts error condition from given {{regex_t*}} pointer value
-;;> and associated error code as returned by {{regcomp(3)}}. This
-;;> procedure always raises an error and should only be called
-;;> if {{regcomp(3)}} returned {{NULL}}.
-
-(: regex-error (pointer integer -> noreturn))
-(define (regex-error regex err-code)
-  (define %regex-error
-    (foreign-lambda c-string* "regex_error" c-pointer int))
-
-  (let ((err-msg (%regex-error regex err-code)))
-    (if err-msg
-      (error-regex err-msg)
-      (error "out of memory"))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 ;; Wrapper around {{regmatch_t*}} raw C pointer which additionally
 ;; tracks the amount of allocated submatches (which must not be equal
 ;; to the amount of matched submatches).
@@ -298,6 +251,21 @@
           (set-finalizer! re regex-free)
           (%%make-regex re))
         (regex-error re err)))))
+
+;; Extracts error condition from given {{regex_t*}} pointer value
+;; and associated error code as returned by {{regcomp(3)}}. This
+;; procedure always raises an error and should only be called
+;; if {{regcomp(3)}} returned {{NULL}}.
+
+(: regex-error (pointer integer -> noreturn))
+(define (regex-error regex err-code)
+  (define %regex-error
+    (foreign-lambda c-string* "regex_error" c-pointer int))
+
+  (let ((err-msg (%regex-error regex err-code)))
+    (if err-msg
+      (error err-msg)
+      (error "out of memory"))))
 
 ;;> Execute the given {{regex}} on the given bytevector {{bv}} and
 ;;> track up to {{submatches}} during execution (if any). Returns
