@@ -51,7 +51,26 @@
 
     return buf;
   }
+
+  int
+  regex_match(regex_t* re, char *string, bool notbol, bool noteol)
+  {
+    int r;
+    int eflags;
+
+    eflags = 0;
+    if (notbol) eflags |= REG_NOTBOL;
+    if (noteol) eflags |= REG_NOTEOL;
+
+    return regexec(re, string, 0, NULL, eflags);
+  }
 ")
+
+;; Constants from regex.h
+(define regex-ok 0)
+(define regex-nomatch (foreign-value "REG_NOMATCH" int))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Convenience type alias for exception type from R7RS.
 (define-type exception (struct condition))
@@ -133,6 +152,26 @@
           (set-finalizer! re regex-free)
           (%%make-regex re))
         (regex-error re err)))))
+
+;;> Check whether the given {{regex}} is matched by the given
+;;> {{string}}. If so {{#t}} is returned, otherwise {{#f}} is returned.
+;;> The optional {{notbol}} and {{noteol}} procedure arguments control
+;;> whether the first/last character of the input should be considered the
+;;> start/end of the line.
+
+(: regex-match? (regex string #!optional integer boolean boolean -> boolean))
+(define (regex-match? regex string #!optional (submatches 0) notbol noteol)
+  (define %regex-match?
+    (foreign-lambda int "regex_match" nonnull-c-pointer nonnull-c-string bool bool))
+
+  (unless (zero? submatches)
+    (error "support for submatches not implemented yet"))
+  (let* ((p (regex-pointer regex))
+         (r (%regex-match? p string notbol noteol)))
+    (cond
+      ((eqv? r regex-ok) #t)
+      ((eqv? r regex-nomatch) #f)
+      (else (regex-error p r)))))
 
 ;; Frees all resources allocate for a {{regex_t*}} pointer value. Invoked
 ;; automatically via a CHICKEN Garbage Collector finalizer.

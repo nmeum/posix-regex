@@ -5,5 +5,5 @@
           (chicken foreign)
           (chicken gc))
 
-  (export make-regex regex? regex-error?)
+  (export make-regex regex? regex-error? regex-match?)
   (include "posix-regex.scm"))
