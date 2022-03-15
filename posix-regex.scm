@@ -4,6 +4,46 @@
   #include <stdbool.h>
   #include <regex.h>
 
+  #include <sys/types.h>
+
+  regmatch_t *
+  make_submatches(size_t n)
+  {
+    regmatch_t *r;
+
+    if (!(r = malloc(sizeof(*r) * n)))
+      return NULL;
+
+    return r;
+  }
+
+  void
+  submatches_free(regmatch_t *pmatch)
+  {
+    free(pmatch);
+  }
+
+  regmatch_t *
+  submatches_get(size_t nmatch, regmatch_t *pmatch, size_t idx)
+  {
+    if (idx >= nmatch)
+      return NULL;
+
+    return &pmatch[idx];
+  }
+
+  ssize_t
+  submatch_start(regmatch_t *m)
+  {
+    return (ssize_t)m->rm_so;
+  }
+
+  ssize_t
+  submatch_end(regmatch_t *m)
+  {
+    return (ssize_t)m->rm_eo;
+  }
+
   regex_t *
   make_regex(int *err, char *pattern, bool igncase, bool ext, bool nl)
   {
@@ -56,7 +96,7 @@
   }
 
   int
-  regex_match(regex_t* re, char *string, bool notbol, bool noteol)
+  regex_exec(regex_t* re, char *string, size_t nmatch, regmatch_t *pmatch, bool notbol, bool noteol)
   {
     int r;
     int eflags;
@@ -65,13 +105,16 @@
     if (notbol) eflags |= REG_NOTBOL;
     if (noteol) eflags |= REG_NOTEOL;
 
-    return regexec(re, string, 0, NULL, eflags);
+    return regexec(re, string, nmatch, pmatch, eflags);
   }
 ")
 
 ;; Constants from regex.h
 (define regex-ok 0)
 (define regex-nomatch (foreign-value "REG_NOMATCH" int))
+
+;; Type alias for R7RS bytevectors (somehow not defined by the R7RS egg).
+(define-type bytevector u8vector)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -122,6 +165,106 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; Wrapper around {{regmatch_t*}} raw C pointer which additionally
+;; tracks the amount of allocated submatches (which must not be equal
+;; to the amount of matched submatches).
+
+(define-record-type Submatches
+  (%%make-submatches ptr count)
+  submatches?
+  (ptr submatches-pointer)
+  (count submatches-count))
+
+;; Convenience type alias for vector of submatches.
+(define-type submatch-vector (vector-of (pair integer integer)))
+
+;; Allocate enough memory to store (at least) the given amount of
+;; submatches within a regular expression.
+
+(: make-submatches (integer -> (struct Submatches)))
+(define (make-submatches n)
+  (define %make-submatches
+    (foreign-lambda c-pointer "make_submatches" size_t))
+
+  (if (zero? n)
+    (%%make-submatches #f 0)
+    (let* ((%n (+ n 1)) ;; reserve space for zero subexpression
+           (p  (%make-submatches %n)))
+      (if p
+          (begin
+            (set-finalizer! p submatches-free)
+            (%%make-submatches p %n))
+        (error "out of memory")))))
+
+;; Free memory allocated for a raw {{regmatch_t*}} pointer.
+
+(: submatches-free (pointer -> undefined))
+(define (submatches-free pointer)
+  (define %submatches-free
+    (foreign-lambda void "submatches_free" nonnull-c-pointer))
+
+  (%submatches-free pointer))
+
+;; Retrieve a single submatch by index. The zero index refers to the
+;; substring that corresponds to the entire regular expression. As such,
+;; actual submatches start at index 1.
+
+(define (submatches-get subm idx)
+  (define %submatches-get
+    (foreign-lambda c-pointer "submatches_get" size_t nonnull-c-pointer size_t))
+
+  (let* ((ptr (submatches-pointer subm))
+         (cnt (submatches-count subm))
+         (ret (%submatches-get cnt ptr idx)))
+    (if ret
+      ret
+      (error (string-append "out of bounds submatch: " (number->string idx))))))
+
+;; Retrieve the start byte offset of a given submatch.
+
+(: submatch-start (pointer -> integer))
+(define (submatch-start match)
+  (define %submatch-start
+    (foreign-lambda ssize_t "submatch_start" nonnull-c-pointer))
+
+  (%submatch-start match))
+
+;; Retrieve the end byte offset of a given submatch.
+
+(: submatch-end (pointer -> integer))
+(define (submatch-end match)
+  (define %submatch-end
+    (foreign-lambda ssize_t "submatch_end" nonnull-c-pointer))
+
+  (%submatch-end match))
+
+;; Convert encountered submatches to a vector.
+
+(: submatches->vector ((struct Submatches) -> submatch-vector))
+(define (submatches->vector subm)
+  ;; Iterate over all submatches until the first one is encountered
+  ;; that is unused or until the submatch count is exceeded.
+  (define (%submatches->vector idx vec)
+    (if (>= idx (submatches-count subm))
+      idx
+      (let* ((s (submatches-get subm idx))
+             (start (submatch-start s))
+             (end (submatch-end s)))
+        (if (and (eqv? start -1) (eqv? end -1)) ;; if unused (see POSIX)
+          idx
+          (begin
+            (vector-set! vec idx (cons start end))
+            (%submatches->vector (+ idx 1) vec))))))
+
+  (if (zero? (submatches-count subm))
+    #()
+    (let* ((vec (make-vector (submatches-count subm)))
+           (matched (%submatches->vector 0 vec)))
+      ;; Resize vector to actual amount of matched submatches.
+      (vector-copy vec 0 matched))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;; Wrapper around the {{regex_t*}} raw C pointer, created to allow
 ;; utilizing CHICKEN type annotations for {{regex_t*}} values.
 
@@ -156,25 +299,45 @@
           (%%make-regex re))
         (regex-error re err)))))
 
+;;> Execute the given {{regex}} on the given bytevector {{bv}} and
+;;> track up to {{submatches}} during execution (if any). Returns
+;;> two values: A boolean specifying if {{bv}} is matched by the
+;;> regex and a vector of submatches. Each submatch in the vector
+;;> is a pair of bytevector offsets. The first element in the pair
+;;> specifies the beginning of the submatch in the bytevector, the
+;;> second element specifies the end of the submatch.
+;;>
+;;> The optional {{notbol}} and {{noteol}} procedure arguments control
+;;> whether the first/last character of the input should be considered
+;;> the start/end of the line.
+
+(: regex-exec (regex bytevector #!optional integer boolean boolean -> boolean submatch-vector))
+(define (regex-exec regex bv #!optional (submatches 0) notbol noteol)
+  (define %regex-exec
+    (foreign-lambda int "regex_exec" nonnull-c-pointer nonnull-c-string
+                                     size_t c-pointer bool bool))
+
+  (let* ((s (make-submatches submatches))
+         (p (regex-pointer regex))
+         (r (%regex-exec p (utf8->string bv) (submatches-count s)
+                           (submatches-pointer s) notbol noteol)))
+    (cond
+      ((eqv? r regex-ok) (values #t (submatches->vector s)))
+      ((eqv? r regex-nomatch) (values #f #()))
+      (else (regex-error p r)))))
+
 ;;> Check whether the given {{regex}} is matched by the given
 ;;> {{string}}. If so {{#t}} is returned, otherwise {{#f}} is returned.
-;;> The optional {{notbol}} and {{noteol}} procedure arguments control
-;;> whether the first/last character of the input should be considered the
-;;> start/end of the line.
+;;> This procedure is essentially a variant of {{regex-exec}} which
+;;> supports strings instead of bytevectors directly and thus doesn't
+;;> support submatches. Refer to {{regex-exec}} for documentation on
+;;> the optional {{notbol}} and {{noteol}} procedure parameters.
 
-(: regex-match? (regex string #!optional integer boolean boolean -> boolean))
-(define (regex-match? regex string #!optional (submatches 0) notbol noteol)
-  (define %regex-match?
-    (foreign-lambda int "regex_match" nonnull-c-pointer nonnull-c-string bool bool))
-
-  (unless (zero? submatches)
-    (error "support for submatches not implemented yet"))
-  (let* ((p (regex-pointer regex))
-         (r (%regex-match? p string notbol noteol)))
-    (cond
-      ((eqv? r regex-ok) #t)
-      ((eqv? r regex-nomatch) #f)
-      (else (regex-error p r)))))
+(: regex-match? (regex string #!optional boolean boolean -> boolean))
+(define (regex-match? regex string #!optional notbol noteol)
+  (let-values (((matches? _) (regex-exec regex (string->utf8 string)
+                                         0 notbol noteol)))
+    matches?))
 
 ;; Frees all resources allocate for a {{regex_t*}} pointer value. Invoked
 ;; automatically via a CHICKEN Garbage Collector finalizer.
