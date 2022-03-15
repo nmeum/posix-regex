@@ -61,11 +61,13 @@
   regex-irritant?)
 
 (: regex-error? (* -> boolean : exception))
-(define (regex-error? eobj)
-  (let ((irritants (error-object-irritants eobj)))
-    (and
-      (not (null? irritants))
-      (regex-irritant? (car irritants)))))
+(define (regex-error? obj)
+  (if (error-object? obj)
+    (let ((irritants (error-object-irritants obj)))
+      (and
+        (not (null? irritants))
+        (regex-irritant? (car irritants))))
+    #f))
 
 (: error-regex (string -> *))
 (define (error-regex msg)
