@@ -1,0 +1,8 @@
+posix-regex.build.sh
+posix-regex.import.scm
+posix-regex.import.so
+posix-regex.install.sh
+posix-regex.link
+posix-regex.so
+posix-regex.static.o
+posix-regex.c

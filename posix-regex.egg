@@ -1,0 +1,10 @@
+((author "Sören Tempel")
+ (synopsis "A thin wrapper around POSIX regular expression matching")
+ (license "GPLv3")
+ (dependencies r7rs)
+ (test-dependencies test)
+ (components
+   (extension posix-regex
+              (csc-options "-R" "r7rs" "-X" "r7rs")
+              (source "posix-regex.sld")
+              (source-dependencies "posix-regex.scm"))))
