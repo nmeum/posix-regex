@@ -1,8 +1,8 @@
 (import (r7rs) (test) (posix-regex))
 
-(define (test-match pattern string)
+(define (test-match pattern string . options)
   (regex-match?
-    (make-regex pattern)
+    (apply make-regex (append (list pattern) options))
     string))
 
 (define (test-exec pattern string)
@@ -29,7 +29,9 @@
   (test "partially match literal string" #t (test-match "foo" "foobar"))
   (test "match bracket expression" #t (test-match "f[a-z][a-z]b" "foobar"))
   (test "match repeated expression" #t (test-match "a*b" "aaaaab"))
-  (test "match start and end" #f (test-match "^foo$" "|foo|")))
+  (test "match start and end" #f (test-match "^foo$" "|foo|"))
+  (test "multiline mode" #t (test-match "^foo" "bar\nfoo\n" #f #f #t))
+  (test "non-multiline mode" #f (test-match "^foo" "bar\nfoo\n")))
 
 (test-group "regex-exec"
   (test "match literal string"
