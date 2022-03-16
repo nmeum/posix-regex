@@ -10,6 +10,13 @@ For this reason, I originally used CHICKEN's Foreign Function Interface to use t
 However, the code for wrapping these functions became more complex over time (e.g. due to support for better error messages via `regerror(3)`).
 As such, I decided to move it to a dedicated library which may be useful for other CHICKEN Schemers which are looking for a pure POSIX BRE or ERE implementation.
 
+## Features
+
+* Thin wrappers for `regcomp(3)` and `regexec(3)`
+* Error handling via [R7RS][r7rs] exceptions and a `regerror(3)` wrapper
+* API with strict [CHICKEN][chicken types] type annotations
+* Support for submatches via R7RS bytevectors
+
 ## Installation
 
 This library is available in the CHICKEN egg repository and can be installed using:
@@ -32,5 +39,7 @@ This library is licensed under [GPL-3.0-only][spdx gpl-3.0-only].
 [opengroup regex]: https://pubs.opengroup.org/onlinepubs/009695399/basedefs/xbd_chap09.html
 [chicken irregex]: https://wiki.call-cc.org/man/5/Module%20(chicken%20irregex)
 [edward github]: https://github.com/nmeum/edward
+[r7rs]: https://small.r7rs.org/
+[chicken types]: https://wiki.call-cc.org/man/5/Types
 [chicken posix-regex]: https://wiki.call-cc.org/eggref/5/posix-regex
 [spdx gpl-3.0-only]: https://spdx.org/licenses/GPL-3.0-only.html
