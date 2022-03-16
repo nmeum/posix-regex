@@ -149,6 +149,9 @@
   (ptr submatches-pointer)
   (count submatches-count))
 
+;; Type annotation for Submatches type constructor.
+(: %%make-submatches (pointer integer -> (struct Submatches)))
+
 ;; Submatch is either a boolean (#f) for a non-matching optional
 ;; submatch or a pair of bytevector offsets.
 (define-type submatch (or false (pair integer integer)))
