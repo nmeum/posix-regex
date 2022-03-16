@@ -75,6 +75,12 @@
     free(re);
   }
 
+  size_t
+  regex_subexprs(regex_t *re)
+  {
+    return re->re_nsub;
+  }
+
   char *
   regex_error(regex_t *re, int err)
   {
@@ -116,6 +122,17 @@
 ;; Type alias for R7RS bytevectors (somehow not defined by the R7RS egg).
 (define-type bytevector u8vector)
 
+;; Wrapper around the {{regex_t*}} raw C pointer, created to allow
+;; utilizing CHICKEN type annotations for {{regex_t*}} values.
+
+(define-record-type Regex
+  (%%make-regex ptr)
+  regex?
+  (ptr regex-pointer))
+
+;; Convenience type alias
+(define-type regex (struct Regex))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Wrapper around {{regmatch_t*}} raw C pointer which additionally
@@ -131,23 +148,24 @@
 ;; Convenience type alias for vector of submatches.
 (define-type submatch-vector (vector-of (pair integer integer)))
 
-;; Allocate memory to store the amount of submatches in a given
-;; regular expression.
+;; Allocate memory to store the correct amount of submatches for
+;; a given regular expression.
 
-(: make-submatches (integer -> (struct Submatches)))
-(define (make-submatches n)
+(: make-submatches (regex -> (struct Submatches)))
+(define (make-submatches regex)
   (define %make-submatches
     (foreign-lambda c-pointer "make_submatches" size_t))
 
-  (if (zero? n)
-    (%%make-submatches #f 0)
-    (let* ((%n (+ n 1)) ;; reserve space for zero subexpression
-           (p  (%make-submatches %n)))
-      (if p
-          (begin
-            (set-finalizer! p submatches-free)
-            (%%make-submatches p %n))
-        (error "out of memory")))))
+  (let ((subexprs (regex-subexprs regex)))
+    (if (zero? subexprs)
+      (%%make-submatches #f 0)
+      (let* ((n (+ subexprs 1)) ;; reserve space for zero subexpression
+             (p (%make-submatches n)))
+        (if p
+            (begin
+              (set-finalizer! p submatches-free)
+              (%%make-submatches p n))
+          (error "out of memory"))))))
 
 ;; Free memory allocated for a raw {{regmatch_t*}} pointer. Invoked
 ;; automatically via a CHICKEN garbage collector finalizer.
@@ -213,17 +231,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Wrapper around the {{regex_t*}} raw C pointer, created to allow
-;; utilizing CHICKEN type annotations for {{regex_t*}} values.
-
-(define-record-type Regex
-  (%%make-regex ptr)
-  regex?
-  (ptr regex-pointer))
-
-;; Convenience type alias
-(define-type regex (struct Regex))
-
 ;; Type annotation for Regex type constructor.
 (: %%make-regex (pointer -> regex))
 
@@ -246,6 +253,15 @@
           (set-finalizer! re regex-free)
           (%%make-regex re))
         (regex-error re err)))))
+
+;; Returns amount of subexpressions in given regular expressions.
+
+(: regex-subexprs (regex -> integer))
+(define (regex-subexprs regex)
+  (define %regex-subexprs
+    (foreign-lambda size_t "regex_subexprs" nonnull-c-pointer))
+
+  (%regex-subexprs (regex-pointer regex)))
 
 ;; Extracts error condition from given {{regex_t*}} pointer value
 ;; and associated error code as returned by {{regcomp(3)}}. This
@@ -278,13 +294,13 @@
 ;;> whether the first/last character of the input should be considered
 ;;> the start/end of the line.
 
-(: regex-exec (regex bytevector #!optional integer boolean boolean -> boolean submatch-vector))
-(define (regex-exec regex bv #!optional (submatches 0) notbol noteol)
+(: regex-exec (regex bytevector #!optional boolean boolean -> boolean submatch-vector))
+(define (regex-exec regex bv #!optional notbol noteol)
   (define %regex-exec
     (foreign-lambda int "regex_exec" nonnull-c-pointer nonnull-c-string
                                      size_t c-pointer bool bool))
 
-  (let* ((s (make-submatches submatches))
+  (let* ((s (make-submatches regex))
          (p (regex-pointer regex))
          (r (%regex-exec p (utf8->string bv) (submatches-count s)
                            (submatches-pointer s) notbol noteol)))
@@ -303,7 +319,7 @@
 (: regex-match? (regex string #!optional boolean boolean -> boolean))
 (define (regex-match? regex string #!optional notbol noteol)
   (let-values (((matches? _) (regex-exec regex (string->utf8 string)
-                                         0 notbol noteol)))
+                                         notbol noteol)))
     matches?))
 
 ;; Frees all resources allocate for a {{regex_t*}} pointer value. Invoked
