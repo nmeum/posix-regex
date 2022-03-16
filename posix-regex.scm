@@ -253,19 +253,20 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;> Returns a pre-compiled regular expression object for the given
-;;> {{pattern}}. The optional arguments {{ignorecase}}, {{extended}}, and
-;;> {{newline}} specify whether the case should be ignored during
-;;> matching, if extended regular expression syntax should be supported,
-;;> and if {{<newline>}} in a pattern should not be treated as an ordinary
-;;> character. All optional arguments default to {{#f}}.
+;;> {{pattern}}. The optional arguments {{ignorecase}} and {{extended}}
+;;> specify whether the case should be ignored during matching and if ERE
+;;> (instead of BRE) syntax should be used. The remaining {{multiline}}
+;;> optional argument will cause the string to be treated as multiple
+;;> lines (affects handling of {{^}} and {{$}}). If an error occurs
+;;> during regex compilation, an exception is raised.
 
 (: make-regex (string #!optional boolean boolean boolean -> regex))
-(define (make-regex pattern #!optional ignorecase extended newline)
+(define (make-regex pattern #!optional ignorecase extended multiline)
   (define %%make-regex
     (foreign-lambda c-pointer "make_regex" (nonnull-c-pointer int) nonnull-c-string bool bool bool))
 
   (let-location ((err integer 0))
-    (let ((re (%%make-regex (location err) pattern ignorecase extended newline)))
+    (let ((re (%%make-regex (location err) pattern ignorecase extended multiline)))
       (if re
         (begin
           (set-finalizer! re regex-free)
@@ -316,30 +317,28 @@
       ((eqv? r regex-nomatch) #f)
       (else (regex-error p r)))))
 
-;;> Execute the given {{regex}} on the given bytevector {{bv}}. Returns
-;;> {{#f}} if the match failed or a vector of matching subexpressions.
+;;> Execute the given {{regex}} on the given {{bytevector}}. Returns
+;;> {{#f}} if the match failed, or a vector of matching subexpressions.
 ;;> In the vector, each element is either {{#f}} (for non-participating
 ;;> optional submatches) or a pair of bytevector offsets. The first
 ;;> element in the pair specifies the beginning of the submatch in the
 ;;> bytevector, the second element specifies the end of the submatch.
-;;> If the submatch does not participate in a succesfull match, then
-;;> both the start and end index are set to -1.
 ;;>
 ;;> The optional {{notbol}} and {{noteol}} procedure arguments control
 ;;> whether the first/last character of the input should be considered
 ;;> the start/end of the line.
 
 (: regex-exec (regex bytevector #!optional boolean boolean -> (or false submatch-vector)))
-(define (regex-exec regex bv #!optional notbol noteol)
+(define (regex-exec regex bytevector #!optional notbol noteol)
   (let* ((subm (make-submatches regex))
          (scnt (submatches-count subm))
          (sptr (submatches-pointer subm)))
-    (if (%regex-exec regex (utf8->string bv) scnt sptr notbol noteol)
+    (if (%regex-exec regex (utf8->string bytevector) scnt sptr notbol noteol)
       (submatches->vector subm)
       #f)))
 
 ;;> Check whether the given {{regex}} is matched by the given
-;;> {{string}}. If so {{#t}} is returned, otherwise {{#f}} is returned.
+;;> {{string}}. If so, {{#t}} is returned, otherwise {{#f}} is returned.
 ;;> This procedure is essentially a variant of {{regex-exec}} which
 ;;> supports strings instead of bytevectors directly and thus doesn't
 ;;> support submatches. Refer to {{regex-exec}} for documentation on
