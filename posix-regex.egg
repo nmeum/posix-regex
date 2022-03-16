@@ -1,5 +1,5 @@
 ((author "Sören Tempel")
- (version "0.0")
+ (version "0.1.0")
  (category misc)
  (license "GPL-3")
  (platform unix)
