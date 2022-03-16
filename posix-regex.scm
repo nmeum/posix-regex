@@ -131,8 +131,8 @@
 ;; Convenience type alias for vector of submatches.
 (define-type submatch-vector (vector-of (pair integer integer)))
 
-;; Allocate enough memory to store (at least) the given amount of
-;; submatches within a regular expression.
+;; Allocate memory to store the amount of submatches in a given
+;; regular expression.
 
 (: make-submatches (integer -> (struct Submatches)))
 (define (make-submatches n)
@@ -196,19 +196,15 @@
 
 (: submatches->vector ((struct Submatches) -> submatch-vector))
 (define (submatches->vector subm)
-  ;; Iterate over all submatches until the first one is encountered
-  ;; that is unused or until the submatch count is exceeded.
   (define (%submatches->vector idx vec)
     (if (>= idx (submatches-count subm))
       idx
       (let* ((s (submatches-get subm idx))
              (start (submatch-start s))
              (end (submatch-end s)))
-        (if (and (eqv? start -1) (eqv? end -1)) ;; if unused (see POSIX)
-          idx
-          (begin
-            (vector-set! vec idx (cons start end))
-            (%submatches->vector (+ idx 1) vec))))))
+        (begin
+          (vector-set! vec idx (cons start end))
+          (%submatches->vector (+ idx 1) vec)))))
 
   (let* ((vec (make-vector (submatches-count subm)))
          (matched (%submatches->vector 0 vec)))
@@ -274,7 +270,9 @@
 ;;> regex and a vector of submatches. Each submatch in the vector
 ;;> is a pair of bytevector offsets. The first element in the pair
 ;;> specifies the beginning of the submatch in the bytevector, the
-;;> second element specifies the end of the submatch.
+;;> second element specifies the end of the submatch. If the submatch
+;;> does not participate in a succesfull match, then both the start
+;;> and end index are set to -1.
 ;;>
 ;;> The optional {{notbol}} and {{noteol}} procedure arguments control
 ;;> whether the first/last character of the input should be considered
