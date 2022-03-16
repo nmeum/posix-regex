@@ -134,8 +134,9 @@
 ;; Convenience type alias
 (define-type regex (struct Regex))
 
-;; Type annotation for Regex type constructor.
+;; Type annotations for Regex type constructor and accessors.
 (: %make-regex (pointer -> regex))
+(: regex-pointer (regex -> pointer))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -149,8 +150,10 @@
   (ptr submatches-pointer)
   (count submatches-count))
 
-;; Type annotation for Submatches type constructor.
+;; Type annotations for Submatches type constructor and accessors.
 (: %make-submatches (pointer integer -> (struct Submatches)))
+(: submatches-pointer ((struct Submatches) -> pointer))
+(: submatches-count ((struct Submatches) -> integer))
 
 ;; Submatch is either a boolean (#f) for a non-matching optional
 ;; submatch or a pair of bytevector offsets.
