@@ -26,6 +26,7 @@ This library is available in the CHICKEN egg repository and can be installed usi
 ## Documentation
 
 The documentation is maintained separately in the [CHICKEN wiki][chicken posix-regex].
+
 Initially, the documentation was partially generated with [schematic][chicken schematic] from inline comments using:
 
 	$ `schematic-wiki -c ';;>' < posix-regex.scm`
