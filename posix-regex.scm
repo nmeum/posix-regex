@@ -291,7 +291,7 @@
   ;; free it automatically.
   (let ((err-msg (%regex-error regex err-code)))
     (if err-msg
-      (error err-msg)
+      (error (string-append "regex error: " err-msg))
       (error "out of memory"))))
 
 ;;> Execute the given {{regex}} on the given bytevector {{bv}}. Returns
