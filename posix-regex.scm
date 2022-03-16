@@ -90,7 +90,7 @@
 
     r = regerror(err, re, buf, bufsiz);
     assert(r <= bufsiz);
-    (void)r;
+    (void)r; /* NDEBUG */
 
     return buf;
   }
@@ -149,7 +149,8 @@
             (%%make-submatches p %n))
         (error "out of memory")))))
 
-;; Free memory allocated for a raw {{regmatch_t*}} pointer.
+;; Free memory allocated for a raw {{regmatch_t*}} pointer. Invoked
+;; automatically via a CHICKEN garbage collector finalizer.
 
 (: submatches-free (pointer -> undefined))
 (define (submatches-free pointer)
@@ -252,14 +253,16 @@
 
 ;; Extracts error condition from given {{regex_t*}} pointer value
 ;; and associated error code as returned by {{regcomp(3)}}. This
-;; procedure always raises an error and should only be called
-;; if {{regcomp(3)}} returned {{NULL}}.
+;; procedure always raises an error.
 
 (: regex-error (pointer integer -> noreturn))
 (define (regex-error regex err-code)
   (define %regex-error
     (foreign-lambda c-string* "regex_error" c-pointer int))
 
+  ;; Due to the c-string* type specifier, CHICKEN will copy memory
+  ;; allocated for the error message to a temporary storage and
+  ;; free it automatically.
   (let ((err-msg (%regex-error regex err-code)))
     (if err-msg
       (error err-msg)
@@ -306,7 +309,7 @@
     matches?))
 
 ;; Frees all resources allocate for a {{regex_t*}} pointer value. Invoked
-;; automatically via a CHICKEN Garbage Collector finalizer.
+;; automatically via a CHICKEN garbage collector finalizer.
 
 (: regex-free (pointer -> undefined))
 (define (regex-free ptr)
