@@ -127,7 +127,7 @@
 ;; utilizing CHICKEN type annotations for {{regex_t*}} values.
 
 (define-record-type Regex
-  (%%make-regex ptr)
+  (%make-regex ptr)
   regex?
   (ptr regex-pointer))
 
@@ -135,7 +135,7 @@
 (define-type regex (struct Regex))
 
 ;; Type annotation for Regex type constructor.
-(: %%make-regex (pointer -> regex))
+(: %make-regex (pointer -> regex))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -144,13 +144,13 @@
 ;; to the amount of matched submatches).
 
 (define-record-type Submatches
-  (%%make-submatches ptr count)
+  (%make-submatches ptr count)
   submatches?
   (ptr submatches-pointer)
   (count submatches-count))
 
 ;; Type annotation for Submatches type constructor.
-(: %%make-submatches (pointer integer -> (struct Submatches)))
+(: %make-submatches (pointer integer -> (struct Submatches)))
 
 ;; Submatch is either a boolean (#f) for a non-matching optional
 ;; submatch or a pair of bytevector offsets.
@@ -164,15 +164,15 @@
 
 (: make-submatches (regex -> (struct Submatches)))
 (define (make-submatches regex)
-  (define %make-submatches
+  (define %%make-submatches
     (foreign-lambda c-pointer "make_submatches" size_t))
 
   (let* ((n (+ (regex-subexprs regex) 1)) ;; reserve space for zero subexpression
-         (p (%make-submatches n)))
+         (p (%%make-submatches n)))
     (if p
         (begin
           (set-finalizer! p submatches-free)
-          (%%make-submatches p n))
+          (%make-submatches p n))
       (error "out of memory"))))
 
 ;; Free memory allocated for a raw {{regmatch_t*}} pointer. Invoked
@@ -258,15 +258,15 @@
 
 (: make-regex (string #!optional boolean boolean boolean -> regex))
 (define (make-regex pattern #!optional ignorecase extended newline)
-  (define %make-regex
+  (define %%make-regex
     (foreign-lambda c-pointer "make_regex" (nonnull-c-pointer int) nonnull-c-string bool bool bool))
 
   (let-location ((err integer 0))
-    (let ((re (%make-regex (location err) pattern ignorecase extended newline)))
+    (let ((re (%%make-regex (location err) pattern ignorecase extended newline)))
       (if re
         (begin
           (set-finalizer! re regex-free)
-          (%%make-regex re))
+          (%make-regex re))
         (regex-error re err)))))
 
 ;; Returns amount of subexpressions in given regular expressions.
