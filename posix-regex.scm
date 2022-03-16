@@ -181,6 +181,7 @@
 ;; substring that corresponds to the entire regular expression. As such,
 ;; actual submatches start at index 1.
 
+(: submatches-get ((struct Submatches) integer -> pointer))
 (define (submatches-get subm idx)
   (define %submatches-get
     (foreign-lambda c-pointer "submatches_get" size_t nonnull-c-pointer size_t))
