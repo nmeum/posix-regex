@@ -1,6 +1,9 @@
 ((author "Sören Tempel")
+ (version "0.0")
+ (category misc)
+ (license "GPL-3")
+ (platform unix)
  (synopsis "A thin wrapper around POSIX regular expression matching")
- (license "GPLv3")
  (dependencies r7rs)
  (test-dependencies test)
  (components
