@@ -119,7 +119,8 @@
 (define regex-ok 0)
 (define regex-nomatch (foreign-value "REG_NOMATCH" int))
 
-;; Type alias for R7RS bytevectors (somehow not defined by the R7RS egg).
+;; Type alias for R7RS bytevectors (not exported by the R7RS egg).
+;; See: https://bugs.call-cc.org/ticket/1796
 (define-type bytevector u8vector)
 
 ;; Wrapper around the {{regex_t*}} raw C pointer, created to allow
