@@ -282,19 +282,18 @@
 
 ;;> Execute the given {{regex}} on the given bytevector {{bv}} and
 ;;> track up to {{submatches}} during execution (if any). Returns
-;;> two values: A boolean specifying if {{bv}} is matched by the
-;;> regex and a vector of submatches. Each submatch in the vector
-;;> is a pair of bytevector offsets. The first element in the pair
-;;> specifies the beginning of the submatch in the bytevector, the
-;;> second element specifies the end of the submatch. If the submatch
-;;> does not participate in a succesfull match, then both the start
-;;> and end index are set to -1.
+;;> {{#f}} if the match failed or a vector of matching subexpressions.
+;;> In the vector, each element is a pair of bytevector offsets. The first
+;;> element in the pair specifies the beginning of the submatch in the
+;;> bytevector, the second element specifies the end of the submatch.
+;;> If the submatch does not participate in a succesfull match, then
+;;> both the start and end index are set to -1.
 ;;>
 ;;> The optional {{notbol}} and {{noteol}} procedure arguments control
 ;;> whether the first/last character of the input should be considered
 ;;> the start/end of the line.
 
-(: regex-exec (regex bytevector #!optional boolean boolean -> boolean submatch-vector))
+(: regex-exec (regex bytevector #!optional boolean boolean -> (or boolean submatch-vector)))
 (define (regex-exec regex bv #!optional notbol noteol)
   (define %regex-exec
     (foreign-lambda int "regex_exec" nonnull-c-pointer nonnull-c-string
@@ -305,8 +304,8 @@
          (r (%regex-exec p (utf8->string bv) (submatches-count s)
                            (submatches-pointer s) notbol noteol)))
     (cond
-      ((eqv? r regex-ok) (values #t (submatches->vector s)))
-      ((eqv? r regex-nomatch) (values #f #()))
+      ((eqv? r regex-ok) (submatches->vector s))
+      ((eqv? r regex-nomatch) #f)
       (else (regex-error p r)))))
 
 ;;> Check whether the given {{regex}} is matched by the given
@@ -318,9 +317,9 @@
 
 (: regex-match? (regex string #!optional boolean boolean -> boolean))
 (define (regex-match? regex string #!optional notbol noteol)
-  (let-values (((matches? _) (regex-exec regex (string->utf8 string)
-                                         notbol noteol)))
-    matches?))
+  (if (regex-exec regex (string->utf8 string) notbol noteol)
+    #t
+    #f))
 
 ;; Frees all resources allocate for a {{regex_t*}} pointer value. Invoked
 ;; automatically via a CHICKEN garbage collector finalizer.
