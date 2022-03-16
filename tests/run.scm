@@ -38,9 +38,21 @@
         '(#t . #())
         (test-exec "foo" 0 "foo"))
 
+  (test "not matching"
+        '(#f . #())
+        (test-exec "foo" 0 "bar"))
+
   (test "match single submatch"
         '(#t . #((0 . 13) (5 . 8)))
-        (test-exec "foo |\\(..*\\)| baz" 1 "foo |bar| baz")))
+        (test-exec "foo |\\(..*\\)| baz" 1 "foo |bar| baz"))
+
+  (test "match zero-length string"
+        '(#t . #((0 . 10) (5 . 5)))
+        (test-exec "foo '\\(.*\\)' baz" 1 "foo '' baz"))
+
+  (test "non-participating submatch"
+        '(#t . #((0 . 8) (-1 . -1) (5 . 8)))
+        (test-exec "foo \\(..*\\)* \\(..*\\)" 2 "foo  baz")))
 
 ;; Exit with non-zero exit status if some test failed.
 (test-exit)
