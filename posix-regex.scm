@@ -331,6 +331,7 @@
 
 (: regex-match? (regex string #!optional boolean boolean -> boolean))
 (define (regex-match? regex string #!optional notbol noteol)
+  ;; TODO: Performance optimization: call regexec() with nmatch == 0.
   (if (regex-exec regex (string->utf8 string) notbol noteol)
     #t
     #f))
