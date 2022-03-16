@@ -307,7 +307,7 @@
 ;;> whether the first/last character of the input should be considered
 ;;> the start/end of the line.
 
-(: regex-exec (regex bytevector #!optional boolean boolean -> (or boolean submatch-vector)))
+(: regex-exec (regex bytevector #!optional boolean boolean -> (or false submatch-vector)))
 (define (regex-exec regex bv #!optional notbol noteol)
   (define %regex-exec
     (foreign-lambda int "regex_exec" nonnull-c-pointer nonnull-c-string
