@@ -160,16 +160,13 @@
   (define %make-submatches
     (foreign-lambda c-pointer "make_submatches" size_t))
 
-  (let ((subexprs (regex-subexprs regex)))
-    (if (zero? subexprs)
-      (%%make-submatches #f 0)
-      (let* ((n (+ subexprs 1)) ;; reserve space for zero subexpression
-             (p (%make-submatches n)))
-        (if p
-            (begin
-              (set-finalizer! p submatches-free)
-              (%%make-submatches p n))
-          (error "out of memory"))))))
+  (let* ((n (+ (regex-subexprs regex) 1)) ;; reserve space for zero subexpression
+         (p (%make-submatches n)))
+    (if p
+        (begin
+          (set-finalizer! p submatches-free)
+          (%%make-submatches p n))
+      (error "out of memory"))))
 
 ;; Free memory allocated for a raw {{regmatch_t*}} pointer. Invoked
 ;; automatically via a CHICKEN garbage collector finalizer.

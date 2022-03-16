@@ -33,7 +33,7 @@
 
 (test-group "regex-exec"
   (test "match literal string"
-        #()
+        #((0 . 3))
         (test-exec "foo" "foo"))
 
   (test "not matching"
