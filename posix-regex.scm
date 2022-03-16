@@ -145,8 +145,12 @@
   (ptr submatches-pointer)
   (count submatches-count))
 
+;; Submatch is either a boolean (#f) for a non-matching optional
+;; submatch or a pair of bytevector offsets.
+(define-type submatch (or false (pair integer integer)))
+
 ;; Convenience type alias for vector of submatches.
-(define-type submatch-vector (vector-of (pair integer integer)))
+(define-type submatch-vector (vector-of submatch))
 
 ;; Allocate memory to store the correct amount of submatches for
 ;; a given regular expression.
@@ -211,6 +215,17 @@
 
   (%submatch-end match))
 
+;; Convert single submatch to a pair or a boolean (in the case
+;; of a non-matching optional submatch).
+
+(: ->submatch (pointer -> submatch))
+(define (pointer->submatch pointer)
+  (let ((start (submatch-start pointer))
+        (end   (submatch-end pointer)))
+    (if (and (eqv? start -1) (eqv? end -1))
+      #f
+      (cons start end))))
+
 ;; Convert encountered submatches to a vector.
 
 (: submatches->vector ((struct Submatches) -> submatch-vector))
@@ -218,11 +233,9 @@
   (define (%submatches->vector idx vec)
     (if (>= idx (submatches-count subm))
       idx
-      (let* ((s (submatches-get subm idx))
-             (start (submatch-start s))
-             (end (submatch-end s)))
+      (let* ((sptr (submatches-get subm idx)))
         (begin
-          (vector-set! vec idx (cons start end))
+          (vector-set! vec idx (pointer->submatch sptr))
           (%submatches->vector (+ idx 1) vec)))))
 
   (let* ((vec (make-vector (submatches-count subm)))
@@ -281,10 +294,10 @@
       (error err-msg)
       (error "out of memory"))))
 
-;;> Execute the given {{regex}} on the given bytevector {{bv}} and
-;;> track up to {{submatches}} during execution (if any). Returns
+;;> Execute the given {{regex}} on the given bytevector {{bv}}. Returns
 ;;> {{#f}} if the match failed or a vector of matching subexpressions.
-;;> In the vector, each element is a pair of bytevector offsets. The first
+;;> In the vector, each element is either {{#f}} (for non-participating
+;;> optional submatches) or a pair of bytevector offsets. The first
 ;;> element in the pair specifies the beginning of the submatch in the
 ;;> bytevector, the second element specifies the end of the submatch.
 ;;> If the submatch does not participate in a succesfull match, then

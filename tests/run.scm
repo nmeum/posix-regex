@@ -49,7 +49,7 @@
         (test-exec "foo '\\(.*\\)' baz" "foo '' baz"))
 
   (test "non-participating submatch"
-        #((0 . 8) (-1 . -1) (5 . 8))
+        #((0 . 8) #f (5 . 8))
         (test-exec "foo \\(..*\\)* \\(..*\\)" "foo  baz")))
 
 ;; Exit with non-zero exit status if some test failed.
