@@ -300,15 +300,14 @@
 ;; Returns {{#t}} if the regex matches, {{#f}} if it doesn't, and raises
 ;; an error if {{regexec(3)}} failed.
 
-(: %regex-exec (regex bytevector integer (or false pointer) boolean boolean -> boolean))
-(define (%regex-exec regex bv submatches-count submatches-ptr notbol noteol)
+(: %regex-exec (regex string integer (or false pointer) boolean boolean -> boolean))
+(define (%regex-exec regex string submatches-count submatches-ptr notbol noteol)
   (define %%regex-exec
     (foreign-lambda int "regex_exec" nonnull-c-pointer nonnull-c-string
                                      size_t c-pointer bool bool))
 
   (let* ((p (regex-pointer regex))
-         (s (utf8->string bv)) ;; XXX: Can't pass bytevectors as char*
-         (r (%%regex-exec p s submatches-count submatches-ptr notbol noteol)))
+         (r (%%regex-exec p string submatches-count submatches-ptr notbol noteol)))
     (cond
       ((eqv? r regex-ok) #t)
       ((eqv? r regex-nomatch) #f)
@@ -332,7 +331,7 @@
   (let* ((subm (make-submatches regex))
          (scnt (submatches-count subm))
          (sptr (submatches-pointer subm)))
-    (if (%regex-exec regex bv scnt sptr notbol noteol)
+    (if (%regex-exec regex (utf8->string bv) scnt sptr notbol noteol)
       (submatches->vector subm)
       #f)))
 
@@ -345,7 +344,7 @@
 
 (: regex-match? (regex string #!optional boolean boolean -> boolean))
 (define (regex-match? regex string #!optional notbol noteol)
-  (%regex-exec regex (string->utf8 string) 0 #f notbol noteol))
+  (%regex-exec regex string 0 #f notbol noteol))
 
 ;; Frees all resources allocate for a {{regex_t*}} pointer value. Invoked
 ;; automatically via a CHICKEN garbage collector finalizer.
