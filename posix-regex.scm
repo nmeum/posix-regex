@@ -134,6 +134,9 @@
 ;; Convenience type alias
 (define-type regex (struct Regex))
 
+;; Type annotation for Regex type constructor.
+(: %%make-regex (pointer -> regex))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Wrapper around {{regmatch_t*}} raw C pointer which additionally
@@ -242,9 +245,6 @@
     (vector-copy vec 0 matched)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; Type annotation for Regex type constructor.
-(: %%make-regex (pointer -> regex))
 
 ;;> Returns a pre-compiled regular expression object for the given
 ;;> {{pattern}}. The optional arguments {{ignorecase}}, {{extended}}, and
