@@ -323,6 +323,8 @@
 ;;> optional submatches) or a pair of bytevector offsets. The first
 ;;> element in the pair specifies the beginning of the submatch in the
 ;;> bytevector, the second element specifies the end of the submatch.
+;;> The first pair in the vector corresponds to the matched substring
+;;> for the entire regular expression.
 ;;>
 ;;> The optional {{notbol}} and {{noteol}} procedure arguments control
 ;;> whether the first/last character of the input should be considered
