@@ -240,10 +240,9 @@
   (define (%submatches->vector idx vec)
     (if (>= idx (submatches-count subm))
       idx
-      (let* ((sptr (submatches-get subm idx)))
-        (begin
-          (vector-set! vec idx (pointer->submatch sptr))
-          (%submatches->vector (+ idx 1) vec)))))
+      (let ((sptr (submatches-get subm idx)))
+        (vector-set! vec idx (pointer->submatch sptr))
+        (%submatches->vector (+ idx 1) vec))))
 
   (let* ((vec (make-vector (submatches-count subm)))
          (matched (%submatches->vector 0 vec)))
