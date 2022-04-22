@@ -29,7 +29,7 @@ The documentation is maintained separately in the [CHICKEN wiki][chicken posix-r
 
 Initially, the documentation was partially generated with [schematic][chicken schematic] from inline comments using:
 
-	$ `schematic-wiki -c ';;>' < posix-regex.scm`
+	$ schematic-wiki -c ';;>' < posix-regex.scm
 
 ## Usage
 
