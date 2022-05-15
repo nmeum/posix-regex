@@ -8,6 +8,6 @@
  (test-dependencies test)
  (components
    (extension posix-regex
-              (csc-options "-R" "r7rs" "-X" "r7rs")
+              (csc-options "-O3" "-R" "r7rs" "-X" "r7rs")
               (source "posix-regex.sld")
               (source-dependencies "posix-regex.scm"))))
