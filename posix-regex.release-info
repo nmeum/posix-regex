@@ -1,4 +1,4 @@
-(repo git "https://github.com/nmeum/{egg-name}.git")
+(repo git "https://git.8pit.net/posix-regex/{egg-name}.git")
 
 (uri targz "https://codeload.github.com/nmeum/{egg-name}/tar.gz/{egg-release}")
 (release "0.1.0")
