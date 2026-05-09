@@ -1,4 +1,8 @@
-(import (r7rs) (test) (posix-regex))
+(cond-expand
+      (chicken-5
+        (import (r7rs) (test) (posix-regex)))
+      (chicken-6
+        (import (scheme base) test posix-regex)))
 
 (define (test-match pattern string . options)
   (regex-match?

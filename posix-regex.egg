@@ -4,10 +4,17 @@
  (license "GPL-3")
  (platform unix)
  (synopsis "A thin wrapper around POSIX regular expression matching")
- (dependencies r7rs)
+ (cond-expand
+   (chicken-5
+     (dependencies r7rs))
+   (chicken-6))
  (test-dependencies test)
  (components
    (extension posix-regex
-              (csc-options "-O3" "-R" "r7rs" "-X" "r7rs")
+              (cond-expand
+                (chicken-5
+                  (csc-options "-O3" "-R" "r7rs" "-X" "r7rs"))
+                (chicken-6
+                  (csc-options "-O3")))
               (source "posix-regex.sld")
               (source-dependencies "posix-regex.scm"))))
