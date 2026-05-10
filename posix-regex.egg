@@ -4,10 +4,7 @@
  (license "GPL-3")
  (platform unix)
  (synopsis "A thin wrapper around POSIX regular expression matching")
- (cond-expand
-   (chicken-5
-     (dependencies r7rs))
-   (chicken-6))
+ (dependencies r7rs)
  (test-dependencies test)
  (components
    (extension posix-regex
