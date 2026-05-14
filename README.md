@@ -42,7 +42,7 @@ This library is licensed under [GPL-3.0-only][spdx gpl-3.0-only].
 [chicken web]: https://call-cc.org
 [opengroup regex]: https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap09.html
 [chicken irregex]: https://wiki.call-cc.org/man/5/Module%20(chicken%20irregex)
-[edward github]: https://github.com/nmeum/edward
+[edward github]: https://git.8pit.net/edward
 [r7rs]: https://small.r7rs.org/
 [chicken types]: https://wiki.call-cc.org/man/5/Types
 [chicken posix-regex]: https://wiki.call-cc.org/eggref/5/posix-regex
